@@ -47,7 +47,7 @@ image test:
     - docker load < pythonwebapp.tar
     - docker run -dit -e PORT=80 -p 8000:80 --name pywebapp pythonwebapp
     - sleep 15
-    - curl --output /dev/null --silent --write-out "%{http_code}" "http://dind-host:8080" | grep -q "200"
+    - curl --output /dev/null --silent --write-out "%{http_code}" "http://dind-host:8000" | grep -q "200"
  #   - curl "http://dind-host:8080" | grep -q "Hello World"
 
 build release images:
