@@ -10,6 +10,10 @@ WORKDIR /usr/src/app
 COPY requirements.txt /usr/src/app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Run the image as a non-root user
+RUN adduser -D worker
+USER worker
+
 # Copying src code to Container
 COPY . /usr/src/app
 
@@ -22,10 +26,6 @@ COPY . /usr/src/app
 
 # Setting Persistent data
 VOLUME ["/app-data"]
-
-# Run the image as a non-root user
-RUN adduser -D myuser
-USER myuser
 
 # Running Python Application
 CMD gunicorn -b 0.0.0.0:$PORT -c gunicorn.conf.py main:app
