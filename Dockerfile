@@ -23,5 +23,9 @@ COPY . /usr/src/app
 # Setting Persistent data
 VOLUME ["/app-data"]
 
+# Run the image as a non-root user
+RUN adduser -D myuser
+USER myuser
+
 # Running Python Application
 CMD gunicorn -b 0.0.0.0:$PORT -c gunicorn.conf.py main:app
