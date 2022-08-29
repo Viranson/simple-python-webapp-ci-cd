@@ -3,16 +3,17 @@ FROM python:2.7
 # Creating Application Source Code Directory
 RUN mkdir -p /usr/src/app
 
+# Run the image as a non-root user
+RUN groupadd -g worker python && \
+    useradd -r -u worker -g python python
+USER worker
+
 # Setting Home Directory for containers
 WORKDIR /usr/src/app
 
 # Installing python dependencies
 COPY requirements.txt /usr/src/app/
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Run the image as a non-root user
-RUN adduser -D worker
-USER worker
 
 # Copying src code to Container
 COPY . /usr/src/app
@@ -28,4 +29,4 @@ COPY . /usr/src/app
 VOLUME ["/app-data"]
 
 # Running Python Application
-CMD gunicorn -b 0.0.0.0:$PORT -c gunicorn.conf.py main:app
+CMD gunicorn --bind 0.0.0.0:$PORT -c gunicorn.conf.py main:app
