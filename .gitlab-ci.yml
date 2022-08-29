@@ -105,7 +105,7 @@ stop review:
     - npm install -g heroku
   script:
     - heroku container:login
-    - heroku apps:destroy -a pywebapp-$CI_COMMIT_REF_NAME -c pythonwebapp-$CI_COMMIT_REF_NAME
+    - heroku apps:destroy -a pywebapp-$CI_COMMIT_REF_NAME -c pywebapp-$CI_COMMIT_REF_NAME
 
 deploy staging:
   # Deploy to staging environment
