@@ -82,6 +82,8 @@ deploy review:
     - heroku create pywebapp-$CI_COMMIT_REF_NAME || echo "project already exist"
     # Build and push the container, tagged as "pywebapp"
     - heroku container:push -a pywebapp-$CI_COMMIT_REF_NAME pywebapp
+    # Set port as Config Var
+    - heroku config:set -a pywebapp-$CI_COMMIT_REF_NAME PORT=80
     # Release the image you just pushed with the "pywebapp" process type
     - heroku container:release -a pywebapp-$CI_COMMIT_REF_NAME pywebapp
 
@@ -124,6 +126,8 @@ deploy staging:
     - heroku create pywebapp-staging || echo "project already exist"
     # Build and push the container, tagged as "pywebapp"
     - heroku container:push -a pywebapp-staging pywebapp
+    # Set port as Config Var
+    - heroku config:set -a pywebapp-$CI_COMMIT_REF_NAME PORT=80
     # Release the image you just pushed with the "pywebapp" process type
     - heroku container:release -a pywebapp-staging pywebapp
 
@@ -153,6 +157,8 @@ deploy prod:
     - heroku create pywebapp-prod || echo "project already exist"
     # Build and push the container, tagged as "pywebapp"
     - heroku container:push -a pywebapp-prod pywebapp
+    # Set port as Config Var
+    - heroku config:set -a pywebapp-$CI_COMMIT_REF_NAME PORT=80
     # Release the image you just pushed with the "pywebapp" process type
     - heroku container:release -a pywebapp-prod pywebapp
 
