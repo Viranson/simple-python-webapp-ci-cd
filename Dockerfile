@@ -24,4 +24,4 @@ ENV PORT 8080
 VOLUME ["/app-data"]
 
 # Running Python Application
-CMD gunicorn -b :$PORT -c gunicorn.conf.py main:app
+CMD gunicorn -b 0.0.0.0:$PORT -c gunicorn.conf.py main:app
