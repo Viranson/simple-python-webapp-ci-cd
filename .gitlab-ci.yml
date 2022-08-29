@@ -78,8 +78,8 @@ deploy review:
   script:
     - heroku container:login
     - heroku create pywebapp-$CI_COMMIT_REF_NAME || echo "project already exist"
-    - heroku container:push -a "${RELEASE_IMAGE}-${CI_COMMIT_REF_NAME}" pywebapp
-    - heroku container:release -a "${RELEASE_IMAGE}-${CI_COMMIT_REF_NAME}" pywebapp
+    - heroku container:push -a pywebapp-$CI_COMMIT_REF_NAME pywebapp
+    - heroku container:release -a pywebapp-$CI_COMMIT_REF_NAME pywebapp
 
 
 stop review:
