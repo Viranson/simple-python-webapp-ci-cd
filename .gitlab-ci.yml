@@ -45,7 +45,7 @@ image test:
     - apk add --no-cache curl
   script:
     - docker load < pythonwebapp.tar
-    - docker run -dit -p 8080:8080 --name pywebapp pythonwebapp
+    - docker run -dit -e PORT=80 -p 8000:80 --name pywebapp pythonwebapp
     - sleep 15
     - curl --output /dev/null --silent --write-out "%{http_code}" "http://dind-host:8080" | grep -q "200"
  #   - curl "http://dind-host:8080" | grep -q "Hello World"
@@ -134,7 +134,7 @@ test staging:
     DOMAIN: pywebapp-staging.herokuapp.com
 
 
-deploy prod:
+.deploy prod:
   # Deploy to production environment
   stage: deploy prod
   environment:
@@ -156,7 +156,7 @@ deploy prod:
     # Release the image you just pushed with the "pywebapp" process type
     - heroku container:release -a pywebapp-prod pywebapp
 
-test prod:
+.test prod:
   <<: *test
   stage: test prod
   variables:
