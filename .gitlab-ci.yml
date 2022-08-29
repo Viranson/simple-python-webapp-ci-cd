@@ -55,6 +55,7 @@ build release images:
   script:
     - docker load < pythonwebapp.tar
     - docker tag pythonwebapp "${RELEASE_IMAGE}:${CI_COMMIT_REF_NAME}"
+    - docker tag pythonwebapp "${RELEASE_IMAGE}:${CI_COMMIT_SHORT_SHA}"
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - docker push "${RELEASE_IMAGE}:${CI_COMMIT_REF_NAME}"
     - docker push "${RELEASE_IMAGE}:${CI_COMMIT_SHORT_SHA}"
