@@ -1,0 +1,148 @@
+# Global for jobs
+  #Use the official docker image
+image: docker:latest
+services:
+  - name: docker:dind
+    alias: dind-host
+
+stages:
+  - build image
+  - acceptance test
+  - release images
+  - deploy review
+  - stop review
+  - deploy staging
+  - test staging
+  - deploy prod
+  - test prod
+
+# Test template to be use for staging and prod tests
+.test_template: $test
+  image: alpine
+  only: 
+    - master
+  script:
+    - apk --no-cache add curl
+    - curl --output /dev/null --silent --write-out "%{http_code}" "https://$DOMAIN" | grep -q "200"
+  environment:
+    name: test
+    url: https://$DOMAIN
+
+build:
+  stage: build image
+  script:
+    - docker build -t pythonwebapp .
+    - docker save pythonwebapp > pythonwebapp.tar
+  artifacts:
+    paths:
+      - pythonwebapp.tar
+    expire_in: 1 hour
+
+image test:
+  stage: acceptance test
+  before_script:
+    # Install curl package on dind
+    - apk add --no-cache curl
+  script:
+    - docker load < pythonwebapp.tar
+    - docker run -dit -p 8080:8080 --name pywebapp pythonwebapp
+    - sleep 15
+    - curl --output /dev/null --silent --write-out "%{http_code}" "http://dind-host:8080" | grep -q "200"
+ #   - curl "http://dind-host:8080" | grep -q "Hello World"
+
+build release images:
+  stage: release images
+  script:
+    - docker load < pythonwebapp.tar
+    - docker tag pythonwebapp "${RELEASE_IMAGE}:${CI_COMMIT_REF_NAME}"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker push "${RELEASE_IMAGE}:${CI_COMMIT_REF_NAME}"
+    - docker push "${RELEASE_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+
+deploy review:
+  # Deploy to review environment
+  stage: deploy review
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    url: https://pywebapp-$CI_COMMIT_REF_NAME.herokuapp.com
+    on_stop: stop review
+  only:
+    - merge_requests
+  before_script:
+  # Install npm package on dind and heroku cli
+    - apk --no-cache add npm
+    - npm install -g heroku
+  script:
+    - heroku container:login
+    - heroku create pywebapp-$CI_COMMIT_REF_NAME || echo "project already exist"
+    - heroku container:push -a pythonwebapp-$CI_COMMIT_REF_NAME pywebapp
+    - heroku container:release -a pythonwebapp-$CI_COMMIT_REF_NAME pywebapp
+
+
+stop review:
+  # Clean review environment
+  stage: stop review
+  variables:
+    GIT_STRATEGY: none
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    action: stop
+  only:
+    - merge_requests
+  when: manual
+  before_script:
+  # Install npm package on dind and heroku cli
+    - apk --no-cache add npm
+    - npm install -g heroku
+  script:
+    - heroku container:login
+    - heroku apps:destroy -a pywebapp-$CI_COMMIT_REF_NAME -c pythonwebapp-$CI_COMMIT_REF_NAME
+
+deploy staging:
+  # Deploy to staging environment
+  stage: deploy staging
+  environment:
+    name: staging
+    url: https://pywebapp-staging.herokuapp.com
+  only:
+    - master
+  before_script:
+  # Install npm package on dind and heroku cli
+    - apk --no-cache add npm
+    - npm install -g heroku
+  script:
+    - heroku container:login
+    - heroku create pywebapp-staging || echo "project already exist"
+    - heroku container:push -a pythonwebapp-staging web
+    - heroku container:release -a pythonwebapp-staging web
+
+test staging:
+  <<: *test
+  stage: test staging
+  variables:
+    DOMAIN: pywebapp-staging.herokuapp.com
+
+
+deploy prod:
+  # Deploy to production environment
+  stage: deploy prod
+  environment:
+    name: prod
+    url: https://pywebapp-prod.herokuapp.com
+  only:
+    - master
+  before_script:
+  # Install npm package on dind and heroku cli
+    - apk --no-cache add npm
+    - npm install -g heroku
+  script:
+    - heroku container:login
+    - heroku create pywebapp-prod || echo "project already exist"
+    - heroku container:push -a pythonwebapp-prod web
+    - heroku container:release -a pythonwebapp-prod web
+
+test prod:
+  <<: *test
+  stage: test prod
+  variables:
+    DOMAIN: pywebapp-prod.herokuapp.com
