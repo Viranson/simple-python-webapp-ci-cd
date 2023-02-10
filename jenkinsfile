@@ -1,0 +1,83 @@
+/*
+Provision One Linux based Jenkins server with docker, git and curl installed. Add jenkins user into docker group and restart Jenkins
+Provision one Linux instance as staging server with docker and curl installed. Add a user (user will be used by jenkins for remote access to this instance) into docker group. This instance will be used over ssh by Jenkins to deploy and test app in staging
+In Jenkins, install Docker (Docker Commons, Docker Pipeline, CloudBees Docker Build and Publish) and SSH Agent pluguins
+Create credentials in Jenkins : credentials named docker-hub-crds for docker hub repository access in order to push docker images and ssh credentials named docker-test-srv for staging server access using a private key
+*/
+
+def img
+def prerun = "docker stop ${JOB_NAME} && docker rm -f ${JOB_NAME} && docker image prune -af"
+//def testApp = "curl --output /dev/null --silent --write-out '%{http_code}' '${testUrl}' | grep 200"
+pipeline {
+    agent any
+    
+    environment {
+        registry='viranson/pyflask'
+        registryCRDS='docker-hub-crds'
+        dockerImage=''
+    }
+
+    stages {
+        stage('Git checkout') {
+            steps {
+                git 'https://gitlab.com/Viranson/simple-python-webapp-ci-cd.git'
+            }
+        }
+        stage('Build Image') {
+            steps {
+                sh returnStatus: true, script: "${prerun}"
+                script {
+                    img = registry + ":${env.BUILD_ID}"
+                    println ("${img}")
+                    dockerImage = docker.build("${img}")
+                }
+            }
+        }
+        stage('Deploy Test in jenkins node') {
+            steps {
+                sh "docker run -dit --name ${JOB_NAME} -e PORT=80 -p 5000:80 ${img}"
+            }
+        }
+        stage('Acceptance Test') {
+            steps {
+                script {
+                    def testUrl = "http://localhost:5000"
+                    sh returnStdout: true, script: "/bin/bash -c \'curl --output /dev/null --silent --write-out \'%{http_code}\' \'${testUrl}\' | grep 200\'"
+                }
+            }
+        }
+        stage('Push to docker-hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', registryCRDS){
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+        stage('Clean jenkins node') {
+            steps {
+                sh returnStatus: true, script: "${prerun}"
+            }
+        }
+        stage('Deploy on Staging') {
+            steps {
+                script {
+                    def drun = "docker run -dit --name ${JOB_NAME} -e PORT=80 -p 5000:80 ${img}"
+                    sshagent(['docker-test-srv']) {
+                        sh returnStatus: true, script: "ssh -o StrictHostKeyChecking=no ubuntu@100.24.74.139 ${prerun}"
+                        sh "ssh -o StrictHostKeyChecking=no ubuntu@100.24.74.139 ${drun}"
+                    }
+                }
+            }
+        }
+        stage('Test Staging') {
+            steps {
+                script {
+                    def testUrl = "http://ec2-100-24-74-139.compute-1.amazonaws.com:5000"
+                    sh returnStdout: true, script: "/bin/bash -c \'curl --output /dev/null --silent --write-out \'%{http_code}\' \'${testUrl}\' | grep 200\'"
+                }
+            }
+        }
+    }
+}
