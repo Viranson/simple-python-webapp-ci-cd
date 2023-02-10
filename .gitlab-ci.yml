@@ -23,7 +23,7 @@ stages:
     - master
   script:
     - apk --no-cache add curl
-    - curl --output /dev/null --silent --write-out "%{http_code}" "https://$DOMAIN" | grep -q "200"
+    - curl --output /dev/null --silent --write-out "%{http_code}" "https://$DOMAIN" | grep "200"
   environment:
     name: test
     url: https://$DOMAIN
